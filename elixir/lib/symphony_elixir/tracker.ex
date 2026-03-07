@@ -38,9 +38,12 @@ defmodule SymphonyElixir.Tracker do
 
   @spec adapter() :: module()
   def adapter do
-    case Config.tracker_kind() do
-      "memory" -> SymphonyElixir.Tracker.Memory
-      _ -> SymphonyElixir.Linear.Adapter
+    case Config.tracker_adapter_module() do
+      module when is_atom(module) and not is_nil(module) -> module
+      _ -> kind_to_module(Config.tracker_kind())
     end
   end
+
+  defp kind_to_module("memory"), do: SymphonyElixir.Tracker.Memory
+  defp kind_to_module(_), do: SymphonyElixir.Linear.Adapter
 end

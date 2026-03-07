@@ -205,6 +205,28 @@ defmodule SymphonyElixir.ExtensionsTest do
     assert SymphonyElixir.Tracker.adapter() == Adapter
   end
 
+  test "adapter_module overrides kind-based dispatch" do
+    issue = %Issue{id: "issue-1", identifier: "MT-1", state: "In Progress"}
+    Application.put_env(:symphony_elixir, :memory_tracker_issues, [issue])
+
+    write_workflow_file!(Workflow.workflow_file_path(),
+      tracker_kind: "linear",
+      tracker_adapter_module: "SymphonyElixir.Tracker.Memory"
+    )
+
+    assert SymphonyElixir.Tracker.adapter() == Memory
+    assert {:ok, [^issue]} = SymphonyElixir.Tracker.fetch_candidate_issues()
+  end
+
+  test "adapter_module nil falls back to kind-based dispatch" do
+    write_workflow_file!(Workflow.workflow_file_path(),
+      tracker_kind: "linear",
+      tracker_adapter_module: nil
+    )
+
+    assert SymphonyElixir.Tracker.adapter() == Adapter
+  end
+
   test "linear adapter delegates reads and validates mutation responses" do
     Application.put_env(:symphony_elixir, :linear_client_module, FakeLinearClient)
 

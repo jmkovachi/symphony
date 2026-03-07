@@ -50,6 +50,7 @@ defmodule SymphonyElixir.Config do
                                default: %{},
                                keys: [
                                  kind: [type: {:or, [:string, nil]}, default: nil],
+                                 adapter_module: [type: {:or, [:string, nil]}, default: nil],
                                  endpoint: [type: :string, default: @default_linear_endpoint],
                                  api_key: [type: {:or, [:string, nil]}, default: nil],
                                  project_slug: [type: {:or, [:string, nil]}, default: nil],
@@ -181,6 +182,14 @@ defmodule SymphonyElixir.Config do
   @spec tracker_kind() :: tracker_kind()
   def tracker_kind do
     get_in(validated_workflow_options(), [:tracker, :kind])
+  end
+
+  @spec tracker_adapter_module() :: module() | nil
+  def tracker_adapter_module do
+    case get_in(validated_workflow_options(), [:tracker, :adapter_module]) do
+      nil -> nil
+      name when is_binary(name) -> resolve_adapter_module(name)
+    end
   end
 
   @spec linear_endpoint() :: String.t()
@@ -387,11 +396,21 @@ defmodule SymphonyElixir.Config do
   end
 
   defp require_tracker_kind do
-    case tracker_kind() do
-      "linear" -> :ok
-      "memory" -> :ok
-      nil -> {:error, :missing_tracker_kind}
-      other -> {:error, {:unsupported_tracker_kind, other}}
+    case tracker_adapter_module() do
+      module when is_atom(module) and not is_nil(module) ->
+        if Code.ensure_loaded?(module) do
+          :ok
+        else
+          {:error, {:adapter_module_not_loaded, module}}
+        end
+
+      _ ->
+        case tracker_kind() do
+          "linear" -> :ok
+          "memory" -> :ok
+          nil -> {:error, :missing_tracker_kind}
+          other -> {:error, {:unsupported_tracker_kind, other}}
+        end
     end
   end
 
@@ -460,6 +479,7 @@ defmodule SymphonyElixir.Config do
   defp extract_tracker_options(section) do
     %{}
     |> put_if_present(:kind, normalize_tracker_kind(scalar_string_value(Map.get(section, "kind"))))
+    |> put_if_present(:adapter_module, binary_value(Map.get(section, "adapter_module")))
     |> put_if_present(:endpoint, scalar_string_value(Map.get(section, "endpoint")))
     |> put_if_present(:api_key, binary_value(Map.get(section, "api_key"), allow_empty: true))
     |> put_if_present(:project_slug, scalar_string_value(Map.get(section, "project_slug")))
@@ -778,6 +798,12 @@ defmodule SymphonyElixir.Config do
     state_name
     |> String.trim()
     |> String.downcase()
+  end
+
+  defp resolve_adapter_module(name) when is_binary(name) do
+    module = Module.concat([name])
+
+    if Code.ensure_loaded?(module), do: module, else: nil
   end
 
   defp normalize_tracker_kind(kind) when is_binary(kind) do
