@@ -119,15 +119,16 @@ Symphony is easiest to port when kept in these layers:
 4. `Execution Layer` (workspace + agent subprocess)
    - Filesystem lifecycle, workspace preparation, coding-agent protocol.
 
-5. `Integration Layer` (Linear adapter)
+5. `Integration Layer` (tracker adapter)
    - API calls and normalization for tracker data.
+   - Built-in adapters: Linear. Custom adapters via `tracker.adapter_module`.
 
 6. `Observability Layer` (logs + optional status surface)
    - Operator visibility into orchestrator and agent behavior.
 
 ### 3.3 External Dependencies
 
-- Issue tracker API (Linear for `tracker.kind: linear` in this specification version).
+- Issue tracker API (Linear by default; custom adapters supported via `tracker.adapter_module`).
 - Local filesystem for workspaces and logs.
 - Optional workspace population tooling (for example Git CLI, if used).
 - Coding-agent executable that supports JSON-RPC-like app-server mode over stdio.
@@ -341,8 +342,12 @@ Note:
 Fields:
 
 - `kind` (string)
-  - Required for dispatch.
-  - Current supported value: `linear`
+  - Required for dispatch when `adapter_module` is not set.
+  - Built-in values: `linear`, `memory`
+- `adapter_module` (string, optional)
+  - Fully qualified module name for a custom tracker adapter.
+  - When set, takes precedence over `kind`.
+  - The module must implement the tracker adapter callbacks.
 - `endpoint` (string)
   - Default for `tracker.kind == "linear"`: `https://api.linear.app/graphql`
 - `api_key` (string)
@@ -551,7 +556,8 @@ Validation checks:
 
 This section is intentionally redundant so a coding agent can implement the config layer quickly.
 
-- `tracker.kind`: string, required, currently `linear`
+- `tracker.kind`: string, required when `adapter_module` is not set. Built-in values: `linear`, `memory`
+- `tracker.adapter_module`: string, optional. Custom adapter module name; overrides `kind`
 - `tracker.endpoint`: string, default `https://api.linear.app/graphql` when `tracker.kind=linear`
 - `tracker.api_key`: string or `$VAR`, canonical env `LINEAR_API_KEY` when `tracker.kind=linear`
 - `tracker.project_slug`: string, required when `tracker.kind=linear`
