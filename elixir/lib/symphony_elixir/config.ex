@@ -396,12 +396,14 @@ defmodule SymphonyElixir.Config do
   end
 
   defp require_tracker_kind do
-    case tracker_adapter_module() do
-      module when is_atom(module) and not is_nil(module) ->
+    case get_in(validated_workflow_options(), [:tracker, :adapter_module]) do
+      name when is_binary(name) ->
+        module = Module.concat([name])
+
         if Code.ensure_loaded?(module) do
           :ok
         else
-          {:error, {:adapter_module_not_loaded, module}}
+          {:error, {:adapter_module_not_loaded, name}}
         end
 
       _ ->
@@ -803,7 +805,11 @@ defmodule SymphonyElixir.Config do
   defp resolve_adapter_module(name) when is_binary(name) do
     module = Module.concat([name])
 
-    if Code.ensure_loaded?(module), do: module, else: nil
+    if Code.ensure_loaded?(module) do
+      module
+    else
+      raise ArgumentError, "tracker adapter_module #{inspect(name)} could not be loaded"
+    end
   end
 
   defp normalize_tracker_kind(kind) when is_binary(kind) do

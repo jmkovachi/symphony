@@ -227,6 +227,26 @@ defmodule SymphonyElixir.ExtensionsTest do
     assert SymphonyElixir.Tracker.adapter() == Adapter
   end
 
+  test "invalid adapter_module raises on dispatch" do
+    write_workflow_file!(Workflow.workflow_file_path(),
+      tracker_kind: "linear",
+      tracker_adapter_module: "Nonexistent.Tracker.Module"
+    )
+
+    assert_raise ArgumentError, ~r/could not be loaded/, fn ->
+      SymphonyElixir.Tracker.adapter()
+    end
+  end
+
+  test "invalid adapter_module fails validation" do
+    write_workflow_file!(Workflow.workflow_file_path(),
+      tracker_kind: "linear",
+      tracker_adapter_module: "Nonexistent.Tracker.Module"
+    )
+
+    assert {:error, {:adapter_module_not_loaded, "Nonexistent.Tracker.Module"}} = Config.validate!()
+  end
+
   test "linear adapter delegates reads and validates mutation responses" do
     Application.put_env(:symphony_elixir, :linear_client_module, FakeLinearClient)
 

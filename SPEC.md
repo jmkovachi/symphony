@@ -347,7 +347,9 @@ Fields:
 - `adapter_module` (string, optional)
   - Fully qualified module name for a custom tracker adapter.
   - When set, takes precedence over `kind`.
-  - The module must implement the tracker adapter callbacks.
+  - The module must implement the tracker adapter callbacks: `fetch_candidate_issues/0`,
+    `fetch_issues_by_states/1`, `fetch_issue_states_by_ids/1`, `create_comment/2`,
+    and `update_issue_state/2`.
 - `endpoint` (string)
   - Default for `tracker.kind == "linear"`: `https://api.linear.app/graphql`
 - `api_key` (string)
